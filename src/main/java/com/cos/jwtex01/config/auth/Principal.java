@@ -8,11 +8,12 @@ import org.springframework.security.core.userdetails.UserDetails;
 
 import com.cos.jwtex01.domain.user.User;
 
-public class PrincipalDetails implements UserDetails{
+public class Principal implements UserDetails{
 
+	private static final long serialVersionUID = 1L;
 	private User user;
 
-    public PrincipalDetails(User user){
+    public Principal(User user){
         this.user = user;
     }
 

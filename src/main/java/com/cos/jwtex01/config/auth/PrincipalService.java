@@ -1,5 +1,7 @@
 package com.cos.jwtex01.config.auth;
 
+import javax.servlet.http.HttpSession;
+
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -12,16 +14,17 @@ import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
-public class PrincipalDetailsService implements UserDetailsService{
+public class PrincipalService implements UserDetailsService{
 
 	private final UserRepository userRepository;
+	private final HttpSession session;
 	
 	@Override
 	public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
 		System.out.println("PrincipalDetailsService : 진입");
 		User user = userRepository.findByUsername(username);
-
-		// session.setAttribute("loginUser", user);
-		return new PrincipalDetails(user);
+		Principal principal = new Principal(user);
+		session.setAttribute("principal", principal);
+		return principal;
 	}
 }

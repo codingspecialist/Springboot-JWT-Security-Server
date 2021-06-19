@@ -1,4 +1,4 @@
-package com.cos.jwtex01.controller.auth;
+package com.cos.jwtex01.controller.user;
 
 import lombok.Data;
 

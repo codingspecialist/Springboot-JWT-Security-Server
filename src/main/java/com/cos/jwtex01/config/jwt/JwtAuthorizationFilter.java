@@ -6,27 +6,33 @@ import javax.servlet.FilterChain;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpSession;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.authentication.www.BasicAuthenticationFilter;
 
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
-import com.cos.jwtex01.config.auth.PrincipalDetails;
+import com.cos.jwtex01.config.auth.LoginUser;
+import com.cos.jwtex01.config.auth.Principal;
 import com.cos.jwtex01.domain.user.User;
 import com.cos.jwtex01.domain.user.UserRepository;
 
-// 인가
 public class JwtAuthorizationFilter extends BasicAuthenticationFilter{
 	
-	private UserRepository userRepository;
+	private final UserRepository userRepository;
+	private final HttpSession session;
+
 	
-	public JwtAuthorizationFilter(AuthenticationManager authenticationManager, UserRepository userRepository) {
+	public JwtAuthorizationFilter(AuthenticationManager authenticationManager, UserRepository userRepository, HttpSession session) {
 		super(authenticationManager);
 		this.userRepository = userRepository;
+		this.session = session;
 	}
 	
 	@Override
@@ -41,24 +47,30 @@ public class JwtAuthorizationFilter extends BasicAuthenticationFilter{
 		String token = request.getHeader(JwtProperties.HEADER_STRING)
 				.replace(JwtProperties.TOKEN_PREFIX, "");
 		
-		// 토큰 검증 (이게 인증이기 때문에 AuthenticationManager도 필요 없음)
-		// 내가 SecurityContext에 집적접근해서 세션을 만들때 자동으로 UserDetailsService에 있는 loadByUsername이 호출됨.
 		String username = JWT.require(Algorithm.HMAC512(JwtProperties.SECRET)).build().verify(token)
 				.getClaim("username").asString();
+		
 		
 		if(username != null) {	
 			User user = userRepository.findByUsername(username);
 			
-			// 인증은 토큰 검증시 끝. 인증을 하기 위해서가 아닌 스프링 시큐리티가 수행해주는 권한 처리를 위해 
-			// 아래와 같이 토큰을 만들어서 Authentication 객체를 강제로 만들고 그걸 세션에 저장!
-			PrincipalDetails principalDetails = new PrincipalDetails(user);
+			// 1. authenticationManager.authenticate() 함수를 타게 되면 인증을 한번 더 하게 되고
+			// 이때 비밀번호 검증을 하게 되는데, User 테이블에서 가져온 비밀번호 해시값으로 비교가 불가능하다.
+			// 2. 그래서 강제로 세션에 저장만 한다.
+			// 3. 단점은 @AuthenticationPrincipal 어노테이션을 사용하지 못하는 것이다.
+			// 4. 이유는 UserDetailsService를 타지 않으면 @AuthenticationPrincipal 이 만들어지지 않는다.
+			// 5. 그래서 @LoginUser 을 하나 만들려고 한다.
+			// 6. 그러므로 모든 곳에서 @AuthenticationPrincipal 사용을 금지한다. @LoginUser 사용 추천!!
+			
+			
+			Principal principalDetails = new Principal(user);
+			session.setAttribute("principal", principalDetails);
 			Authentication authentication =
 					new UsernamePasswordAuthenticationToken(
-							principalDetails, //나중에 컨트롤러에서 DI해서 쓸 때 사용하기 편함.
-							null, // 패스워드는 모르니까 null 처리, 어차피 지금 인증하는게 아니니까!!
+							principalDetails.getUsername(),
+							principalDetails.getPassword(), 
 							principalDetails.getAuthorities());
-			
-			// 강제로 시큐리티의 세션에 접근하여 값 저장
+
 			SecurityContextHolder.getContext().setAuthentication(authentication);
 		}
 	
