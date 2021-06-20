@@ -17,7 +17,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
 import com.cos.jwtex01.config.auth.Principal;
-import com.cos.jwtex01.controller.user.LoginReqDto;
+import com.cos.jwtex01.web.user.LoginReqDto;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import lombok.RequiredArgsConstructor;
@@ -68,7 +68,17 @@ public class JwtAuthenticationFilter extends UsernamePasswordAuthenticationFilte
 				.withClaim("username", principalDetailis.getUser().getUsername())
 				.sign(Algorithm.HMAC512(JwtProperties.SECRET));
 		
+//		ObjectMapper om = new ObjectMapper();
+//		String userJson = null;
+//		try {
+//			userJson = om.writeValueAsString(principalDetailis.getUser());
+//		} catch (Exception e) {
+//			e.printStackTrace();
+//		}
+		
+		
 		response.addHeader(JwtProperties.HEADER_STRING, JwtProperties.TOKEN_PREFIX+jwtToken);
+		//response.getWriter().println(userJson);
 	}
 	
 }
